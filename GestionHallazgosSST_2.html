@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gestión de Hallazgos SST</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --p1:#1A3A8F;--p2:#122B6E;--p3:#0C1F52;
+  --p-light:#EAF0FB;--p-mid:#6B8DD6;
+  --acc:#C8960C;--acc2:#E0AA14;--acc-light:#FDF6E3;
+  --card:#fff;--cardbr:rgba(26,58,143,.13);
+  --txt:#111827;--txt2:#374151;--txt3:#6B7280;
+  --bg:#F0F3FA;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
+.app{max-width:1100px;margin:0 auto;padding:0 0 3rem}
+.topbar{background:var(--p3);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:60px;border-bottom:3px solid var(--acc)}
+.tb-brand{display:flex;align-items:center;gap:12px}
+.tb-icon{width:36px;height:36px;background:var(--acc);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.tb-icon svg{width:19px;height:19px;fill:#fff}
+.tb-title{font-size:15px;font-weight:600;color:#fff;letter-spacing:.02em}
+.tb-sub{font-size:12px;color:rgba(255,255,255,.85);margin-top:2px}
+.tb-right{text-align:right}
+.tb-date{font-size:13px;color:#E0AA14;font-weight:500}
+.tb-day{font-size:11px;color:rgba(255,255,255,.65);margin-top:2px}
+.db-status{display:flex;align-items:center;gap:5px;font-size:11px;margin-top:3px}
+.db-dot{width:7px;height:7px;border-radius:50%;background:#6B7280}
+.db-dot.ok{background:#22c55e}.db-dot.err{background:#ef4444}
+.db-lbl{color:rgba(255,255,255,.6)}
+.subnav{background:var(--p2);padding:0 1.5rem;display:flex;gap:0;overflow-x:auto}
+.snav{padding:12px 16px;font-size:13px;color:rgba(255,255,255,.5);cursor:pointer;border:none;border-bottom:3px solid transparent;background:none;font-family:inherit;transition:all .15s;white-space:nowrap}
+.snav:hover{color:rgba(255,255,255,.85)}
+.snav.on{color:#fff;border-bottom-color:var(--acc2);font-weight:500}
+.nbdg{background:var(--acc);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:5px;font-weight:600}
+.body{padding:1.25rem 1.5rem}
+.dash-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem}
+.kpi{background:var(--card);border:1px solid var(--cardbr);border-radius:10px;padding:14px 16px 12px;border-top:3px solid transparent;text-align:center}
+.kpi-n{font-size:30px;font-weight:500}
+.kpi-l{font-size:11px;color:var(--txt3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+.kpi-tot{border-top-color:var(--p1)}.kpi-tot .kpi-n{color:var(--p1)}
+.kpi-open{border-top-color:var(--acc)}.kpi-open .kpi-n{color:#8A6500}
+.kpi-close{border-top-color:#166534}.kpi-close .kpi-n{color:#166534}
+.kpi-risk{border-top-color:#991b1b}.kpi-risk .kpi-n{color:#991b1b}
+.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem}
+.dash-card{background:var(--card);border:1px solid var(--cardbr);border-radius:10px;padding:1rem 1.25rem}
+.dash-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);margin-bottom:.85rem}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.bar-lbl{font-size:12px;color:var(--txt2);width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:7px;background:var(--p-light);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:var(--p1)}
+.bar-val{font-size:12px;font-weight:500;color:var(--txt2);min-width:20px;text-align:right}
+.pie-wrap{display:flex;align-items:center;gap:16px}
+.pie-legend{display:flex;flex-direction:column;gap:6px}
+.pie-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--txt2)}
+.pie-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dash-empty{font-size:13px;color:var(--txt3);text-align:center;padding:1.5rem 0}
+.recent-scroll{max-height:280px;overflow-y:auto;padding-right:4px}
+.recent-scroll::-webkit-scrollbar{width:5px}
+.recent-scroll::-webkit-scrollbar-track{background:var(--p-light);border-radius:4px}
+.recent-scroll::-webkit-scrollbar-thumb{background:var(--p-mid);border-radius:4px}
+.recent-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:.5px solid rgba(26,58,143,.08)}
+.recent-row:last-child{border-bottom:none}
+.recent-num{font-size:10px;font-weight:700;background:var(--p1);color:#fff;padding:2px 7px;border-radius:3px;margin-right:8px;flex-shrink:0}
+.recent-info{flex:1;font-size:12px;color:var(--txt2)}
+.recent-badge{font-size:10px;padding:2px 8px;border-radius:3px;font-weight:600;flex-shrink:0}
+.rb-open{background:#EAF0FB;color:#1A3A8F}.rb-close{background:#DCFCE7;color:#14532d}
+
+.form-sec{background:var(--card);border:1px solid var(--cardbr);border-radius:10px;margin-bottom:1rem;overflow:hidden}
+.sec-head{padding:.75rem 1.25rem;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(26,58,143,.08)}
+.sec-head.a{background:var(--p-light);border-left:4px solid var(--p1)}
+.sec-head.b{background:var(--acc-light);border-left:4px solid var(--acc)}
+.sec-lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.sec-lbl.a{color:var(--p1)}.sec-lbl.b{color:#8A6500}
+.sec-body{padding:1.25rem}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em}
+.fld input,.fld select,.fld textarea{font-size:14px;color:var(--txt);background:#F8F9FD;border:1px solid rgba(26,58,143,.2);border-radius:7px;padding:9px 12px;width:100%;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--p1);box-shadow:0 0 0 3px rgba(26,58,143,.1);background:#fff}
+.fld textarea{resize:vertical;line-height:1.55}
+.ta-sm{min-height:72px}.ta-md{min-height:90px}.ta-lg{min-height:120px}
+
+/* EVALUACIÓN RIESGO */
+.eval-card{background:#fff;border:1px solid var(--cardbr);border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+.eval-row{display:flex;flex-wrap:wrap;gap:25px;align-items:flex-start}
+.eval-col-entrada{flex:0 0 35%;min-width:220px}
+.eval-col-salida{flex:1;min-width:280px}
+.eval-label{font-weight:700;display:block;margin-top:0;margin-bottom:6px;color:#374151;font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+.eval-select{width:100%;padding:8px 10px;border-radius:6px;border:1px solid #ccc;margin-top:0;background:#fff;font-size:14px;font-family:inherit}
+.eval-select:focus{border-color:var(--p1);outline:none}
+.semaforo-box{margin-top:15px;padding:10px 15px;border-radius:6px;font-weight:700;text-align:center;display:none;font-size:13px;line-height:1.3;border:1px solid rgba(255,255,255,.3)}
+.sem-rojo{background:#d9534f;color:#fff}
+.sem-naranja{background:#f0ad4e;color:#fff}
+.sem-amarillo{background:#ffd500;color:#1a1a1a}
+.sem-verde{background:#5cb85c;color:#fff}
+.criterios-box{margin-top:15px;padding:12px;background:#f8f9fa;border-radius:6px;border:1px solid #dee2e6;display:none}
+.criterio-item{display:flex;align-items:flex-start;margin-bottom:8px;font-size:12px;gap:8px}
+.criterio-item:last-child{margin-bottom:0}
+.criterio-item input[type="checkbox"]{margin-top:2px;cursor:pointer;flex-shrink:0}
+.criterio-item label{font-weight:400;margin:0;cursor:pointer;line-height:1.4;flex:1}
+
+/* UPBOX */
+.upbox{border:1.5px dashed rgba(26,58,143,.22);border-radius:8px;padding:1.2rem;text-align:center;cursor:pointer;background:#F8F9FD;transition:all .15s}
+.upbox:hover{border-color:var(--p1);background:var(--p-light)}
+.upbox input{display:none}
+.upbox-ico{width:34px;height:34px;margin:0 auto 8px;background:var(--p-light);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.upbox-ico svg{width:17px;height:17px;stroke:var(--p1);fill:none;stroke-width:1.8}
+.upbox span{font-size:13px;color:var(--txt3)}
+
+/* SPLIT CARD LAYOUT */
+.split-card{display:grid;grid-template-columns:1fr 320px;gap:0;background:var(--card);border:1px solid var(--cardbr);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.split-left{padding:1rem 1.25rem;border-right:1px solid var(--cardbr)}
+.split-right{padding:1rem;background:#F8FAFB;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:flex-start}
+.split-img{width:100%;border-radius:8px;object-fit:contain;max-height:220px;background:#eee;border:1px solid var(--cardbr);display:block}
+.split-img-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);text-align:center;margin-bottom:2px}
+.img-placeholder{width:100%;height:120px;background:var(--p-light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--p-mid);border:1px dashed var(--p-mid)}
+
+.acts{display:flex;gap:10px;justify-content:flex-end;margin-top:1.25rem;flex-wrap:wrap}
+.btn{padding:9px 20px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s;border:1px solid transparent}
+.btn:active{transform:scale(.98)}
+.btsec{background:#fff;color:var(--txt2);border-color:rgba(26,58,143,.2)}
+.btsec:hover{background:var(--p-light);color:var(--p1);border-color:var(--p1)}
+.btpri{background:var(--p1);color:#fff}.btpri:hover{background:var(--p2)}
+.btacc{background:var(--acc);color:#fff}.btacc:hover{background:#a87a0a}
+.btxls{background:#166534;color:#fff}.btxls:hover{background:#14532d}
+.btpdf{background:#991b1b;color:#fff}.btpdf:hover{background:#7f1d1d}
+.btdanger{background:#fff;color:#991b1b;border-color:#fca5a5}.btdanger:hover{background:#FEE2E2}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.stat{background:var(--card);border:1px solid var(--cardbr);border-radius:10px;padding:14px 14px 12px;text-align:center;border-top:3px solid transparent}
+.stat-n{font-size:28px;font-weight:500}
+.stat-l{font-size:11px;color:var(--txt3);margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+.s-tot{border-top-color:var(--p1)}.s-tot .stat-n{color:var(--p1)}
+.s-open{border-top-color:var(--acc)}.s-open .stat-n{color:#8A6500}
+.s-close{border-top-color:#166534}.s-close .stat-n{color:#166534}
+.s-risk{border-top-color:#991b1b}.s-risk .stat-n{color:#991b1b}
+
+.filters{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;background:var(--card);border:1px solid var(--cardbr);border-radius:9px;padding:.75rem 1rem}
+.filter-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3)}
+.filters select{font-size:13px;padding:6px 10px;border-radius:7px;border:1px solid rgba(26,58,143,.2);background:#F8F9FD;color:var(--txt);font-family:inherit;cursor:pointer}
+
+.badge{display:inline-flex;font-size:11px;padding:3px 10px;border-radius:4px;font-weight:600;margin:2px}
+.b-open{background:#EAF0FB;color:#1A3A8F}.b-close{background:#DCFCE7;color:#14532d}
+.b-r1{background:#FEE2E2;color:#7f1d1d}.b-r2{background:#FEF3C7;color:#78350f}
+.b-r3{background:#EAF0FB;color:#1A3A8F}.b-r4{background:#F0FDF4;color:#166534}
+.pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:5px;background:rgba(26,58,143,.07);color:var(--txt2);margin:2px;border:1px solid rgba(26,58,143,.1)}
+.rcard-num{display:inline-block;background:var(--p1);color:#fff;font-size:10px;font-weight:700;letter-spacing:.07em;padding:2px 9px;border-radius:4px;margin-bottom:5px}
+.rcard-title{font-size:14px;font-weight:600;color:var(--p3)}
+.rcard-meta{font-size:12px;color:var(--txt3);margin-top:2px}
+.rcard-desc{font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:6px}
+.cierre-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#8A6500;margin-bottom:5px}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:2rem 1rem}
+.modal-bg.open{display:block}
+.modal{background:#fff;border-radius:12px;max-width:820px;margin:0 auto;overflow:hidden}
+.modal-head{background:var(--p3);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--acc)}
+.modal-head h2{font-size:15px;font-weight:600;color:#fff}
+.modal-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.modal-close:hover{color:#fff}
+.modal-body{padding:1.5rem}
+.modal-acts{display:flex;gap:10px;justify-content:flex-end;padding:1rem 1.5rem;border-top:1px solid var(--cardbr);background:#fafafa}
+
+.prev{width:100%;max-height:180px;object-fit:contain;border-radius:8px;margin-top:10px;display:none;border:1px solid var(--cardbr);background:#f0f0f0}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:13px;color:#fff;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;max-width:380px}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:3rem;color:var(--txt3);font-size:14px}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+.spinner-dark{display:inline-block;width:15px;height:15px;border:2px solid var(--p-light);border-top-color:var(--p1);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+option:disabled{color:#888;font-style:italic}
+@media(max-width:800px){.split-card{grid-template-columns:1fr}.split-left{border-right:none;border-bottom:1px solid var(--cardbr)}.eval-col-entrada,.eval-col-salida{flex:0 0 100%;min-width:100%}}
+@media(max-width:640px){.g2,.g3,.stats,.dash-kpis,.dash-row{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr}.dash-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="tb-brand">
+      <div class="tb-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div>
+        <div class="tb-title">Gestión de Hallazgos SST</div>
+        <div class="tb-sub">Inspecciones y auditorías</div>
+        <div class="db-status"><div class="db-dot" id="db-dot"></div><span class="db-lbl" id="db-lbl">Conectando...</span></div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-date" id="topdate"></div>
+      <div class="tb-day" id="topday"></div>
+    </div>
+  </div>
+  <div class="subnav">
+    <button class="snav on" onclick="showTab('dash')">Dashboard</button>
+    <button class="snav" onclick="showTab('form')">Nuevo hallazgo</button>
+    <button class="snav" onclick="showTab('list')">Hallazgos <span class="nbdg" id="nbadge">0</span></button>
+    <button class="snav" onclick="showTab('cierre')">Cierre de hallazgos</button>
+  </div>
+
+  <div class="body">
+
+    <!-- DASHBOARD -->
+    <div id="pdash">
+      <div class="dash-kpis">
+        <div class="kpi kpi-tot"><div class="kpi-n" id="dk_tot">0</div><div class="kpi-l">Total hallazgos</div></div>
+        <div class="kpi kpi-open"><div class="kpi-n" id="dk_open">0</div><div class="kpi-l">Abiertos</div></div>
+        <div class="kpi kpi-close"><div class="kpi-n" id="dk_close">0</div><div class="kpi-l">Cerrados</div></div>
+        <div class="kpi kpi-risk"><div class="kpi-n" id="dk_risk">0</div><div class="kpi-l">Riesgo I / II</div></div>
+      </div>
+      <div class="dash-row">
+        <div class="dash-card"><div class="dash-title">Hallazgos por área</div><div id="chart-area"><div class="dash-empty">Sin datos aún</div></div></div>
+        <div class="dash-card"><div class="dash-title">Distribución por nivel de riesgo</div><div id="chart-riesgo"><div class="dash-empty">Sin datos aún</div></div></div>
+      </div>
+      <div class="dash-card" style="margin-bottom:1.25rem">
+        <div class="dash-title">Todos los hallazgos reportados</div>
+        <div class="recent-scroll" id="chart-recientes"><div class="dash-empty">Sin datos aún</div></div>
+      </div>
+    </div>
+
+    <!-- NUEVO HALLAZGO -->
+    <div id="pform" style="display:none">
+      <div class="form-sec">
+        <div class="sec-head a"><span class="sec-lbl a">Información general</span></div>
+        <div class="sec-body">
+          <div class="grid g3" style="margin-bottom:12px">
+            <div class="fld"><label>Fecha *</label><input type="date" id="f_fecha"/></div>
+            <div class="fld"><label>Reportado por *</label><input type="text" id="f_rep" placeholder="Nombre del inspector"/></div>
+            <div class="fld"><label>Área *</label><input type="text" id="f_area" placeholder="Ej: Producción, Bodega..."/></div>
+          </div>
+          <div class="grid g2">
+            <div class="fld"><label>Proceso</label><input type="text" id="f_proc" placeholder="Proceso o actividad inspeccionada"/></div>
+            <div class="fld"><label>N° personas expuestas</label><input type="number" id="f_pers" min="0" placeholder="0"/></div>
+
+            <label class="eval-label">1. Probabilidad (P):</label>
+            <select id="f_prob" class="eval-select" onchange="evaluarRiesgoForm()">
+      <div class="form-sec">
+        <div class="sec-head a"><span class="sec-lbl a">Descripción del hallazgo</span></div>
+        <div class="sec-body">
+          <div class="grid g2" style="margin-bottom:12px">
+            <div class="fld">
+              <label>1. Tipo de Riesgo *</label>
+              <select id="f_riesgo" class="eval-select" onchange="updPeligros('f_riesgo','f_peligro')">
+                <option value="">Seleccione tipo de riesgo...</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>2. Peligro / Hazard GTC-45 *</label>
+              <select id="f_peligro" class="eval-select">
+                <option value="">Primero seleccione tipo de riesgo...</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid g2" style="margin-bottom:12px">
+            <div class="fld">
+              <label>3. Hallazgo *</label>
+              <textarea id="f_hallazgo" class="ta-sm" placeholder="Describa brevemente el hallazgo encontrado..."></textarea>
+            </div>
+            <div class="fld">
+              <label>4. Descripción detallada *</label>
+              <textarea id="f_desc" class="ta-md" placeholder="Describa con precisión lo encontrado durante la inspección..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+              <option value="">Seleccione valor...</option>
+              <option value="1">1 - Muy Baja</option>
+              <option value="2">2 - Baja</option>
+              <option value="3">3 - Media</option>
+              <option value="4">4 - Alta</option>
+              <option value="5">5 - Muy Alta</option>
+            </select>
+            <label class="eval-label" style="margin-top:16px">2. Consecuencia (C):</label>
+            <select id="f_cons" class="eval-select" onchange="evaluarRiesgoForm()">
+              <option value="">Seleccione valor...</option>
+              <option value="1">1 - Leve</option>
+              <option value="2">2 - Menor</option>
+              <option value="3">3 - Moderada</option>
+              <option value="4">4 - Mayor</option>
+              <option value="5">5 - Catastrófica</option>
+            </select>
+          </div>
+          <div class="eval-col-salida">
+            <label class="eval-label">3. Semáforo:</label>
+            <div id="f_semaforo" class="semaforo-box"></div>
+            <label class="eval-label" style="margin-top:12px">4. Criterios correspondientes:</label>
+            <div id="f_criterios" class="criterios-box"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Incumplimiento -->
+      <div class="form-sec">
+        <div class="sec-head a"><span class="sec-lbl a">7. Incumplimiento en SST</span></div>
+        <div class="sec-body">
+          <div class="fld"><label></label><textarea id="f_inc" class="ta-lg" placeholder="Norma, decreto o procedimiento incumplido..."></textarea></div>
+        </div>
+      </div>
+
+      <!-- 8. Acciones -->
+      <div class="form-sec">
+        <div class="sec-head a"><span class="sec-lbl a">8. Acciones para mitigar</span></div>
+        <div class="sec-body">
+          <div class="fld"><label></label><textarea id="f_acc" class="ta-md" placeholder="Acciones correctivas y preventivas propuestas..."></textarea></div>
+        </div>
+      </div>
+
+      <!-- 9. Evidencia fotográfica -->
+      <div class="form-sec">
+        <div class="sec-head a"><span class="sec-lbl a">9. Evidencia fotográfica — hallazgo</span></div>
+        <div class="sec-body">
+          <div class="upbox" onclick="document.getElementById('fi_h').click()">
+            <input type="file" id="fi_h" accept="image/*" onchange="prevImg(this,'pi_h')"/>
+            <div class="upbox-ico"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+            <span>Toca para adjuntar imagen del hallazgo</span>
+          </div>
+          <img id="pi_h" class="prev"/>
+        </div>
+      </div>
+
+      <div class="acts">
+        <button class="btn btsec" onclick="clearForm()">Limpiar formulario</button>
+        <button class="btn btpri" id="btn-save" onclick="saveRec()">Registrar hallazgo</button>
+      </div>
+    </div>
+
+    <!-- LISTADO -->
+    <div id="plist" style="display:none">
+      <div class="stats">
+        <div class="stat s-tot"><div class="stat-n" id="st_t">0</div><div class="stat-l">Total</div></div>
+        <div class="stat s-open"><div class="stat-n" id="st_a">0</div><div class="stat-l">Abiertos</div></div>
+        <div class="stat s-close"><div class="stat-n" id="st_c">0</div><div class="stat-l">Cerrados</div></div>
+        <div class="stat s-risk"><div class="stat-n" id="st_r">0</div><div class="stat-l">Riesgo I / II</div></div>
+      </div>
+      <div class="filters">
+        <span class="filter-lbl">Filtros:</span>
+        <select id="fil_a" onchange="renderList()"><option value="">Todas las áreas</option></select>
+        <select id="fil_r" onchange="renderList()">
+          <option value="">Todos los riesgos</option>
+          <option>I - Muy alto (no aceptable)</option>
+          <option>II - Alto (no aceptable)</option>
+          <option>III - Medio (aceptable con controles)</option>
+          <option>IV - Bajo (aceptable)</option>
+        </select>
+        <select id="fil_e" onchange="renderList()">
+          <option value="">Todos los estados</option>
+          <option>Abierto</option><option>Cerrado</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+        <button class="btn btxls" onclick="exportXLS()">&#8659; Exportar Excel</button>
+        <button class="btn btpdf" onclick="exportPDF()">&#8659; Exportar PDF</button>
+      </div>
+      <div id="rlist"><div class="empty"><span class="spinner-dark"></span> Cargando...</div></div>
+    </div>
+
+    <!-- CIERRE DE HALLAZGOS -->
+    <div id="pcierre" style="display:none">
+      <div class="filters" style="margin-bottom:1rem">
+        <span class="filter-lbl">Filtrar:</span>
+        <select id="cil_e" onchange="renderCierre()">
+          <option value="Abierto">Solo abiertos</option>
+          <option value="">Todos</option>
+          <option value="Cerrado">Cerrados</option>
+        </select>
+        <select id="cil_a" onchange="renderCierre()"><option value="">Todas las áreas</option></select>
+      </div>
+      <div id="clist"><div class="empty"><span class="spinner-dark"></span> Cargando...</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-bg" id="modal-edit">
+  <div class="modal">
+    <div class="modal-head"><h2>Editar hallazgo</h2><button class="modal-close" onclick="closeModal('modal-edit')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="e_id"/>
+      <div class="grid g3" style="margin-bottom:12px">
+        <div class="fld"><label>Fecha *</label><input type="date" id="e_fecha"/></div>
+        <div class="fld"><label>Reportado por *</label><input type="text" id="e_rep"/></div>
+        <div class="fld"><label>Área *</label><input type="text" id="e_area"/></div>
+      </div>
+      <div class="grid g2" style="margin-bottom:12px">
+        <div class="fld"><label>Proceso</label><input type="text" id="e_proc"/></div>
+        <div class="fld"><label>N° personas</label><input type="number" id="e_pers" min="0"/></div>
+      </div>
+      <div class="fld" style="margin-bottom:12px"><label>Tipo de hallazgo / Peligro GTC-45</label><select id="e_tipo"></select></div>
+      <div class="grid g2" style="margin-bottom:12px">
+        <div class="fld"><label>Hallazgo</label><textarea id="e_hallazgo" class="ta-sm"></textarea></div>
+        <div class="fld"><label>Descripción detallada</label><textarea id="e_desc" class="ta-md"></textarea></div>
+      </div>
+      <div class="fld" style="margin-bottom:12px"><label>Incumplimiento en SST</label><textarea id="e_inc" class="ta-lg"></textarea></div>
+      <div class="fld"><label>Acciones para mitigar</label><textarea id="e_acc" class="ta-md"></textarea></div>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btsec" onclick="closeModal('modal-edit')">Cancelar</button>
+      <button class="btn btpri" id="btn-edit-save" onclick="saveEdit()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CIERRE -->
+<div class="modal-bg" id="modal-cierre">
+  <div class="modal">
+    <div class="modal-head"><h2 id="modal-cierre-title">Registrar cierre</h2><button class="modal-close" onclick="closeModal('modal-cierre')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="c_id"/>
+      <div style="background:var(--p-light);border-left:4px solid var(--p1);border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:1rem;font-size:13px;color:var(--p2)" id="c_resumen"></div>
+      <div class="grid g3" style="margin-bottom:12px">
+        <div class="fld"><label>Fecha de cierre *</label><input type="date" id="c_fc"/></div>
+        <div class="fld"><label>Responsable *</label><input type="text" id="c_resp" placeholder="Nombre del responsable"/></div>
+        <div class="fld"><label>Estado</label><select id="c_est"><option value="Cerrado">Cerrado</option><option value="Abierto">Abierto</option></select></div>
+      </div>
+      <div class="fld" style="margin-bottom:12px"><label>Medidas aplicadas *</label><textarea id="c_med" class="ta-md" placeholder="Acciones ejecutadas para cerrar el hallazgo..."></textarea></div>
+      <div class="fld" style="margin-bottom:8px"><label>Imagen de evidencia del cierre</label></div>
+      <div class="upbox" onclick="document.getElementById('c_fi').click()">
+        <input type="file" id="c_fi" accept="image/*" onchange="prevImg(this,'c_pi')"/>
+        <div class="upbox-ico"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+        <span>Adjuntar imagen del cierre</span>
+      </div>
+      <img id="c_pi" class="prev"/>
+    </div>
+    <div class="modal-acts">
+      <button class="btn btsec" onclick="closeModal('modal-cierre')">Cancelar</button>
+      <button class="btn btacc" id="btn-cierre-save" onclick="saveCierre()">Guardar cierre</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const SB_URL='https://wnacpqpmxlaythnfmkbm.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InduYWNwcXBteGxheXRobmZta2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODM5NTMsImV4cCI6MjA5MjE1OTk1M30.rOpRwIHrb21M3LIQ24SOTxPJFB5rxp2pESJDOEaUOpE';
+const H={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=representation'};
+let recs=[];
+
+
+
+const RIESGO_NIVELES={'I':{'clase':'sem-rojo','texto':'🔴 Nivel I - Muy Alto (No aceptable)','criterios':['Riesgo inminente de fatalidad','Lesión grave inmediata','Suspensión inmediata de actividad','Intervención urgente']},
+  'II':{'clase':'sem-naranja','texto':'🟠 Nivel II - Alto (No aceptable)','criterios':['Alta probabilidad de accidente','Condición insegura severa','Corrección inmediata','Posible incapacidad laboral']},
+  'III':{'clase':'sem-amarillo','texto':'🟡 Nivel III - Medio (Aceptable con controles)','criterios':['Riesgo moderado','Aceptable con controles','Seguimiento periódico','Control preventivo']},
+  'IV':{'clase':'sem-verde','texto':'🟢 Nivel IV - Bajo (Aceptable)','criterios':['Baja probabilidad','Consecuencia menor','Condición controlada','Monitoreo periódico']}
+};
+
+function obtenerNivelGTC(nr){if(nr>=15)return'I';if(nr>=8)return'II';if(nr>=4)return'III';return'IV';}
+
+function evaluarRiesgoForm(){
+  const p=document.getElementById('f_prob').value;
+  const c=document.getElementById('f_cons').value;
+  const sem=document.getElementById('f_semaforo');
+  const crit=document.getElementById('f_criterios');
+  if(p===''||c===''){sem.style.display='none';crit.style.display='none';return;}
+  const nr=parseInt(p)*parseInt(c);
+  const nivel=obtenerNivelGTC(nr);
+  const info=RIESGO_NIVELES[nivel];
+  sem.style.display='block';
+  sem.className='semaforo-box '+info.clase;
+  sem.innerHTML=`${info.texto} | NR = ${nr}`;
+  crit.style.display='block';
+  crit.innerHTML='';
+  info.criterios.forEach((item,idx)=>{
+    const div=document.createElement('div');
+    div.className='criterio-item';
+    const cb=document.createElement('input');
+    cb.type='checkbox';cb.id=`crit-${idx}`;cb.value=item;
+    const lbl=document.createElement('label');
+    lbl.htmlFor=`crit-${idx}`;lbl.textContent=item;
+    div.appendChild(cb);div.appendChild(lbl);
+    crit.appendChild(div);
+  });
+}
+
+
+
+async function sbGet(){const r=await fetch(SB_URL+'/rest/v1/hallazgos?select=*&order=num.desc',{headers:H});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbInsert(data){const r=await fetch(SB_URL+'/rest/v1/hallazgos',{method:'POST',headers:H,body:JSON.stringify(data)});if(!r.ok)throw new Error(await r.text());return r.json();}
+async function sbUpdate(id,data){const h={...H,Prefer:'return=minimal'};const r=await fetch(SB_URL+'/rest/v1/hallazgos?id=eq.'+id,{method:'PATCH',headers:h,body:JSON.stringify(data)});if(!r.ok)throw new Error(await r.text());}
+async function sbDelete(id){const h={...H};delete h['Prefer'];const r=await fetch(SB_URL+'/rest/v1/hallazgos?id=eq.'+id,{method:'DELETE',headers:h});if(!r.ok)throw new Error(await r.text());}
+async function sbMaxNum(){const r=await fetch(SB_URL+'/rest/v1/hallazgos?select=num&order=num.desc&limit=1',{headers:H});if(!r.ok)return 0;const d=await r.json();return d.length?d[0].num:0;}
+
+async function initDB(){try{const r=await fetch(SB_URL+'/rest/v1/hallazgos?select=id&limit=1',{headers:H});if(!r.ok)throw new Error('HTTP '+r.status);setDbStatus(true);recs=await sbGet();updBadge();renderDash();}catch(e){setDbStatus(false);console.error(e.message);}}
+function setDbStatus(ok){document.getElementById('db-dot').className='db-dot '+(ok?'ok':'err');document.getElementById('db-lbl').textContent=ok?'Conectado a Supabase':'Error de conexión';}
+
+const dias=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const hoy=new Date();
+document.getElementById('topdate').textContent=hoy.getDate()+' de '+meses[hoy.getMonth()]+' de '+hoy.getFullYear();
+document.getElementById('topday').textContent=dias[hoy.getDay()];
+document.getElementById('f_fecha').valueAsDate=hoy;
+
+function showTab(t){['pdash','pform','plist','pcierre'].forEach(id=>document.getElementById(id).style.display='none');document.getElementById('p'+t).style.display='';document.querySelectorAll('.snav').forEach((el,i)=>{el.classList.toggle('on',['dash','form','list','cierre'][i]===t);});if(t==='dash'){sbGet().then(d=>{recs=d;updBadge();renderDash();}).catch(console.error);}if(t==='list'){sbGet().then(d=>{recs=d;updBadge();updFilters();renderList();}).catch(console.error);}if(t==='cierre'){sbGet().then(d=>{recs=d;updBadge();updCierreFilters();renderCierre();}).catch(console.error);}}
+
+function prevImg(inp,pid){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=e=>{const i=document.getElementById(pid);i.src=e.target.result;i.style.display='block';};rd.readAsDataURL(f);}
+
+
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function clearForm(){
+  ['f_fecha','f_rep','f_area','f_proc','f_pers','f_hallazgo','f_desc','f_inc','f_acc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_riesgo').value='';document.getElementById('f_peligro').value='';
+  document.getElementById('f_prob').value='';document.getElementById('f_cons').value='';
+  document.getElementById('f_semaforo').style.display='none';document.getElementById('f_criterios').style.display='none';
+  document.getElementById('f_fecha').valueAsDate=new Date();
+  const i=document.getElementById('pi_h');i.src='';i.style.display='none';
+  document.getElementById('fi_h').value='';
+}
+function updBadge(){document.getElementById('nbadge').textContent=recs.length;}
+
+function renderDash(){
+  const tot=recs.length;
+  document.getElementById('dk_tot').textContent=tot;
+  document.getElementById('dk_open').textContent=recs.filter(r=>r.est==='Abierto').length;
+  document.getElementById('dk_close').textContent=recs.filter(r=>r.est==='Cerrado').length;
+  document.getElementById('dk_risk').textContent=recs.filter(r=>r.riesgo&&(r.riesgo.startsWith('🔴')||r.riesgo.startsWith('🟠'))).length;
+  const aEl=document.getElementById('chart-area');
+  if(!tot){aEl.innerHTML='<div class="dash-empty">Sin datos aún</div>';}else{const map={};recs.forEach(r=>{if(r.area)map[r.area]=(map[r.area]||0)+1;});const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,8);const max=sorted[0][1];aEl.innerHTML=sorted.map(([l,n])=>`<div class="bar-row"><div class="bar-lbl" title="${l}">${l}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/max*100)}%"></div></div><div class="bar-val">${n}</div></div>`).join('');}
+  const rEl=document.getElementById('chart-riesgo');
+  if(!tot){rEl.innerHTML='<div class="dash-empty">Sin datos aún</div>';}else{const rm={'I - Muy alto (no aceptable)':0,'II - Alto (no aceptable)':0,'III - Medio (aceptable con controles)':0,'IV - Bajo (aceptable)':0};recs.forEach(r=>{if(r.riesgo){Object.keys(rm).forEach(k=>{if(r.riesgo.includes(k.split('-')[0]))rm[k]++;});}});const colors=['#d9534f','#f0ad4e','#1A3A8F','#5cb85c'],labels=['I - Muy alto','II - Alto','III - Medio','IV - Bajo'];const vals=Object.values(rm),total=vals.reduce((a,b)=>a+b,0)||1;let off=0;const slices=vals.map((v,i)=>{const pct=v/total,a=pct*2*Math.PI,rd=40,cx=50,cy=50;const x1=cx+rd*Math.sin(off),y1=cy-rd*Math.cos(off);off+=a;const x2=cx+rd*Math.sin(off),y2=cy-rd*Math.cos(off);return v>0?`<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${rd},${rd} 0 ${pct>.5?1:0},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${colors[i]}"/>`:'';}).join('');rEl.innerHTML=`<div class="pie-wrap"><svg viewBox="0 0 100 100" width="110" height="110">${slices}</svg><div class="pie-legend">${labels.map((l,i)=>`<div class="pie-item"><div class="pie-dot" style="background:${colors[i]}"></div><span>${l} (${vals[i]})</span></div>`).join('')}</div></div>`;}
+  const recEl=document.getElementById('chart-recientes');
+  if(!tot){recEl.innerHTML='<div class="dash-empty">Sin datos aún</div>';}else{recEl.innerHTML=recs.map(r=>`<div class="recent-row"><span class="recent-num">HAL-${String(r.num).padStart(3,'0')}</span><div class="recent-info"><span style="font-weight:500;color:var(--txt)">${r.tipo||''}</span> &mdash; ${r.area||''} &middot; ${r.fecha||''}</div><span class="recent-badge ${r.est==='Abierto'?'rb-open':'rb-close'}">${r.est||''}</span></div>`).join('');}
+}
+
+function rbClass(v){if(!v)return'';if(v.includes('I -')||v.startsWith('🔴'))return'b-r1';if(v.includes('II -')||v.startsWith('🟠'))return'b-r2';if(v.includes('III -')||v.startsWith('🟡'))return'b-r3';return'b-r4';}
+function updFilters(){const areas=[...new Set(recs.map(r=>r.area).filter(Boolean))].sort();const sel=document.getElementById('fil_a');const cur=sel.value;sel.innerHTML='<option value="">Todas las áreas</option>'+areas.map(a=>`<option${a===cur?' selected':''}>${a}</option>`).join('');}
+function filtered(){const fa=document.getElementById('fil_a').value,fr=document.getElementById('fil_r').value,fe=document.getElementById('fil_e').value;return recs.filter(r=>(!fa||r.area===fa)&&(!fr||!r.riesgo||r.riesgo.includes(fr))&&(!fe||r.est===fe));}
+
+function renderList(){
+  document.getElementById('st_t').textContent=recs.length;
+  document.getElementById('st_a').textContent=recs.filter(r=>r.est==='Abierto').length;
+  document.getElementById('st_c').textContent=recs.filter(r=>r.est==='Cerrado').length;
+  document.getElementById('st_r').textContent=recs.filter(r=>r.riesgo&&(r.riesgo.startsWith('🔴')||r.riesgo.startsWith('🟠'))).length;
+  const list=filtered();const el=document.getElementById('rlist');
+  if(!list.length){el.innerHTML='<div class="empty">No hay hallazgos que coincidan.</div>';return;}
+  el.innerHTML=list.map(r=>{
+    return `<div class="split-card">
+      <div class="split-left">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div><span class="rcard-num">HAL-${String(r.num).padStart(3,'0')}</span>
+            <div class="rcard-title" style="margin-top:5px">${r.tipo||''}</div>
+            <div class="rcard-meta">${r.fecha||''}${r.rep?' &middot; '+r.rep:''}${r.proc?' &middot; '+r.proc:''} &middot; ${r.area||''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            ${r.riesgo?`<span class="badge ${rbClass(r.riesgo)}">${r.riesgo.includes('I -')?'I':r.riesgo.includes('II -')?'II':r.riesgo.includes('III')?'III':'IV'}</span>`:''}
+            <span class="badge ${r.est==='Abierto'?'b-open':'b-close'}">${r.est||''}</span>
+          </div>
+        </div>
+        ${r.hallazgo?`<div style="font-size:13px;font-weight:600;color:var(--p1);margin-bottom:5px">${r.hallazgo}</div>`:''}
+        <div class="rcard-desc">${r.descripcion||''}</div>
+        ${r.riesgo?`<div style="margin:6px 0;padding:6px 10px;border-radius:6px;font-size:12px;font-weight:700;background:${r.riesgo.includes('I -')?'#d9534f':r.riesgo.includes('II -')?'#f0ad4e':r.riesgo.includes('III')?'#ffd500':'#5cb85c'};color:${r.riesgo.includes('III')?'#1a1a1a':'#fff'};display:inline-block">${r.riesgo.split('|')[0].trim()}</div>`:''}
+        ${r.numero_riesgo?`<div style="font-size:11px;color:var(--txt3);margin-top:4px">NR: ${r.numero_riesgo}</div>`:''}
+        <div style="margin-bottom:6px;margin-top:6px">
+          ${r.pers?`<span class="pill">Personas exp: ${r.pers}</span>`:''}
+          ${r.inc?`<span class="pill">Incump: ${r.inc}</span>`:''}
+          ${r.acc?`<span class="pill">Acción: ${r.acc}</span>`:''}
+        </div>
+        ${(r.fc||r.med)?`<div style="background:var(--acc-light);border-left:3px solid var(--acc);border-radius:0 6px 6px 0;padding:8px 12px;margin-top:8px">
+          <div class="cierre-label">Cierre del hallazgo</div>
+          ${r.fc?`<div style="font-size:12px;color:#374151">${r.fc} &middot; ${r.resp||'—'}</div>`:''}
+          ${r.med?`<div style="font-size:12px;color:#374151;margin-top:3px">${r.med}</div>`:''}
+        </div>`:''}
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btsec" style="font-size:12px;padding:5px 12px" onclick="openEdit(${r.id})">Editar</button>
+          <button class="btn btdanger" style="font-size:12px;padding:5px 12px" onclick="delRec(${r.id})">Eliminar</button>
+        </div>
+      </div>
+      <div class="split-right">
+        <div>
+          <div class="split-img-label">Foto del hallazgo</div>
+          ${r.img_h?`<img src="${r.img_h}" class="split-img"/>`:`<div class="img-placeholder">Sin imagen</div>`}
+        </div>
+        ${(r.img_c||r.fc)?`<div>
+          <div class="split-img-label">Foto del cierre</div>
+          ${r.img_c?`<img src="${r.img_c}" class="split-img"/>`:`<div class="img-placeholder">Sin imagen</div>`}
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updCierreFilters(){const areas=[...new Set(recs.map(r=>r.area).filter(Boolean))].sort();const sel=document.getElementById('cil_a');const cur=sel.value;sel.innerHTML='<option value="">Todas las áreas</option>'+areas.map(a=>`<option${a===cur?' selected':''}>${a}</option>`).join('');}
+function renderCierre(){
+  const fe=document.getElementById('cil_e').value,fa=document.getElementById('cil_a').value;
+  const list=recs.filter(r=>(!fe||r.est===fe)&&(!fa||r.area===fa));
+  const el=document.getElementById('clist');
+  if(!list.length){el.innerHTML='<div class="empty">No hay hallazgos que coincidan.</div>';return;}
+  el.innerHTML=list.map(r=>{
+    return `<div class="split-card">
+      <div class="split-left">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <div><span class="rcard-num">HAL-${String(r.num).padStart(3,'0')}</span>
+            <div class="rcard-title" style="margin-top:5px">${r.tipo||''} &mdash; ${r.area||''}</div>
+            <div class="rcard-meta">${r.fecha||''}${r.rep?' &middot; '+r.rep:''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            ${r.riesgo?`<span class="badge ${rbClass(r.riesgo)}">${r.riesgo.includes('I -')?'I':r.riesgo.includes('II -')?'II':r.riesgo.includes('III')?'III':'IV'}</span>`:''}
+            <span class="badge ${r.est==='Abierto'?'b-open':'b-close'}">${r.est||''}</span>
+          </div>
+        </div>
+        ${r.hallazgo?`<div style="font-size:13px;font-weight:600;color:var(--p1);margin-bottom:4px">${r.hallazgo}</div>`:''}
+        <div class="rcard-desc">${r.descripcion||''}</div>
+        ${r.riesgo?`<div style="margin:6px 0;padding:6px 10px;border-radius:6px;font-size:12px;font-weight:700;background:${r.riesgo.includes('I -')?'#d9534f':r.riesgo.includes('II -')?'#f0ad4e':r.riesgo.includes('III')?'#ffd500':'#5cb85c'};color:${r.riesgo.includes('III')?'#1a1a1a':'#fff'};display:inline-block">${r.riesgo.split('|')[0].trim()}</div>`:''}
+        ${r.numero_riesgo?`<div style="font-size:11px;color:var(--txt3);margin-top:4px">NR: ${r.numero_riesgo}</div>`:''}
+        ${(r.fc||r.med)?`<div style="background:var(--acc-light);border-left:3px solid var(--acc);border-radius:0 6px 6px 0;padding:8px 12px;margin-top:8px">
+          <div class="cierre-label">Cierre registrado</div>
+          ${r.fc?`<div style="font-size:12px;color:#374151">Fecha: ${r.fc} &middot; Resp: ${r.resp||'—'}</div>`:''}
+          ${r.med?`<div style="font-size:12px;color:#374151;margin-top:3px">${r.med}</div>`:''}
+        </div>`:''}
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btacc" style="font-size:12px;padding:6px 16px" onclick="openCierre(${r.id})">${r.est==='Cerrado'?'Editar cierre':'Registrar cierre'}</button>
+        </div>
+      </div>
+      <div class="split-right">
+        <div>
+          <div class="split-img-label">Foto del hallazgo</div>
+          ${r.img_h?`<img src="${r.img_h}" class="split-img"/>`:`<div class="img-placeholder">Sin imagen</div>`}
+        </div>
+        <div>
+          <div class="split-img-label">Foto del cierre</div>
+          ${r.img_c?`<img src="${r.img_c}" class="split-img"/>`:`<div class="img-placeholder">Sin imagen</div>`}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openEdit(id){const r=recs.find(x=>x.id===id);if(!r)return;document.getElementById('e_id').value=id;document.getElementById('e_fecha').value=r.fecha||'';document.getElementById('e_rep').value=r.rep||'';document.getElementById('e_area').value=r.area||'';document.getElementById('e_proc').value=r.proc||'';document.getElementById('e_pers').value=r.pers||'';document.getElementById('e_tipo').value=r.tipo||'';document.getElementById('e_hallazgo').value=r.hallazgo||'';document.getElementById('e_desc').value=r.descripcion||'';document.getElementById('e_inc').value=r.inc||'';document.getElementById('e_acc').value=r.acc||'';document.getElementById('modal-edit').classList.add('open');}
+async function saveEdit(){const id=parseInt(document.getElementById('e_id').value);const btn=document.getElementById('btn-edit-save');btn.innerHTML='<span class="spinner"></span> Guardando...';btn.disabled=true;try{await sbUpdate(id,{fecha:gv('e_fecha'),rep:gv('e_rep'),area:gv('e_area'),proc:gv('e_proc')||null,pers:gv('e_pers')||null,tipo:gv('e_tipo'),hallazgo:gv('e_hallazgo'),descripcion:gv('e_desc'),inc:gv('e_inc')||null,acc:gv('e_acc')||null});recs=await sbGet();updBadge();closeModal('modal-edit');toast('Hallazgo actualizado correctamente');updFilters();renderList();}catch(e){toast('Error: '+e.message,'#991b1b');}finally{btn.innerHTML='Guardar cambios';btn.disabled=false;}}
+
+function openCierre(id){const r=recs.find(x=>x.id===id);if(!r)return;document.getElementById('c_id').value=id;document.getElementById('modal-cierre-title').textContent=(r.est==='Cerrado'?'Editar cierre — ':'Registrar cierre — ')+'HAL-'+String(r.num).padStart(3,'0');document.getElementById('c_resumen').innerHTML=`<strong>${r.tipo||''}</strong> &mdash; ${r.area||''}<br><span style="font-size:12px;color:var(--txt2)">${r.hallazgo||r.descripcion||''}</span>`;document.getElementById('c_fc').value=r.fc||'';document.getElementById('c_resp').value=r.resp||'';document.getElementById('c_est').value=r.est==='Cerrado'?'Cerrado':'Cerrado';document.getElementById('c_med').value=r.med||'';const pi=document.getElementById('c_pi');if(r.img_c){pi.src=r.img_c;pi.style.display='block';}else{pi.src='';pi.style.display='none';}document.getElementById('c_fi').value='';document.getElementById('modal-cierre').classList.add('open');}
+async function saveCierre(){const id=parseInt(document.getElementById('c_id').value);const fc=gv('c_fc'),resp=gv('c_resp'),med=gv('c_med');if(!fc||!resp||!med){toast('Completa fecha, responsable y medidas (*)','#991b1b');return;}const btn=document.getElementById('btn-cierre-save');btn.innerHTML='<span class="spinner"></span> Guardando...';btn.disabled=true;try{const pi=document.getElementById('c_pi');const existImg=recs.find(x=>x.id===id)?.img_c||null;const img_c=(pi.style.display!=='none'&&pi.src.startsWith('data:'))?pi.src:existImg;await sbUpdate(id,{fc,resp,est:gv('c_est'),med,img_c});recs=await sbGet();updBadge();closeModal('modal-cierre');toast('Cierre guardado correctamente');updCierreFilters();renderCierre();}catch(e){toast('Error: '+e.message,'#991b1b');}finally{btn.innerHTML='Guardar cierre';btn.disabled=false;}}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+async function delRec(id){if(!confirm('¿Eliminar este hallazgo de la base de datos?'))return;try{await sbDelete(id);recs=await sbGet();updBadge();updFilters();renderList();toast('Hallazgo eliminado');}catch(e){toast('Error al eliminar','#991b1b');}}
+
+function exportXLS(){
+  if(!recs.length){toast('No hay hallazgos para exportar','#991b1b');return;}
+  const cols=['N°','Fecha','Reportado por','Área','Proceso','Tipo / Peligro GTC-45','Hallazgo','Descripción','Probabilidad','Consecuencia','Número de Riesgo','Nivel','Incumplimiento SST','Acciones mitigación','Personas exp.','Estado','Fecha cierre','Responsable','Medidas cierre'];
+  const rows=filtered().map(r=>['HAL-'+String(r.num).padStart(3,'0'),r.fecha||'',r.rep||'',r.area||'',r.proc||'',r.tipo||'',r.hallazgo||'',r.descripcion||'',r.probabilidad||'',r.consecuencia||'',r.numero_riesgo||'',r.riesgo||'',r.inc||'',r.acc||'',r.pers||'',r.est||'',r.fc||'',r.resp||'',r.med||'']);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([cols,...rows]);
+  ws['!cols']=[6,10,16,14,14,28,28,36,12,14,16,22,34,28,10,10,10,16,34].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'Hallazgos SST');
+  XLSX.writeFile(wb,'Hallazgos_SST_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel exportado correctamente');
+}
+
+async function exportPDF(){
+  if(!recs.length){toast('No hay hallazgos para exportar','#991b1b');return;}
+  toast('Generando PDF...');
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const pw=doc.internal.pageSize.getWidth();
+  const ph=doc.internal.pageSize.getHeight();
+  const list=filtered();
+  let page=1;
+  const imgW=80;const imgX=pw-imgW-8;const textW=imgX-16;
+
+  function hdr(){
+    doc.setFillColor(12,31,82);doc.rect(0,0,pw,18,'F');
+    doc.setFillColor(200,150,12);doc.rect(0,18,pw,2.5,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont(undefined,'bold');
+    doc.text('Gestión de Hallazgos SST',12,11);
+    doc.setFontSize(8);doc.setFont(undefined,'normal');
+    doc.text('Inspecciones y auditorías',12,16);
+    doc.text('Pág.'+page+' · '+new Date().toLocaleDateString('es-CO')+' · Registros: '+list.length,pw-12,13,{align:'right'});
+  }
+
+  function addImgFit(src,x,y,maxW,maxH){
+    if(!src||!src.startsWith('data:'))return 0;
+    try{const img=new Image();img.src=src;const nw=img.naturalWidth||400,nh=img.naturalHeight||300;let w=maxW,h=(nh/nw)*maxW;if(h>maxH){h=maxH;w=(nw/nh)*maxH;}const ext=src.split(';')[0].split('/')[1].toUpperCase().replace('JPEG','JPG');doc.addImage(src,ext,x+(maxW-w)/2,y,w,h,'','FAST');return h+3;}catch(e){return 0;}
+  }
+
+  hdr();let y=25;
+
+  for(const r of list){
+    const hasH=!!(r.img_h&&r.img_h.startsWith('data:'));
+    const hasC=!!(r.img_c&&r.img_c.startsWith('data:'));
+    const imgSectionH=hasH?62:0;
+    const closeSectionH=(r.fc||r.med)?(hasC?72:20):0;
+    const descL=doc.splitTextToSize(r.descripcion||'',textW).slice(0,3);
+    const estH=52+(descL.length*4.2)+imgSectionH+closeSectionH+8;
+
+    if(y+estH>ph-8){doc.addPage();page++;hdr();y=25;}
+
+    doc.setFillColor(234,240,251);doc.roundedRect(8,y,pw-16,9,1.5,1.5,'F');
+    doc.setFillColor(26,58,143);doc.roundedRect(8,y,28,9,1,1,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont(undefined,'bold');
+    doc.text('HAL-'+String(r.num).padStart(3,'0'),10,y+6);
+    doc.setTextColor(12,31,82);doc.setFontSize(9.5);
+    doc.text(doc.splitTextToSize((r.tipo||'')+(r.area?' — '+r.area:''),textW+30)[0],39,y+6);
+    const estColor=r.est==='Cerrado'?[22,101,60]:[26,58,143];
+    doc.setFontSize(7.5);doc.setTextColor(...estColor);doc.text(r.est||'',pw-10,y+6,{align:'right'});
+    y+=12;
+
+    const yStart=y;
+    doc.setFont(undefined,'normal');doc.setFontSize(7.5);doc.setTextColor(100,100,100);
+    doc.text((r.fecha||'')+(r.rep?' · '+r.rep:'')+(r.proc?' · '+r.proc:''),10,y);y+=5;
+    if(r.hallazgo){doc.setFont(undefined,'bold');doc.setTextColor(26,58,143);doc.setFontSize(9);const hl=doc.splitTextToSize(r.hallazgo,textW);doc.text(hl[0],10,y);y+=5;}
+    if(r.descripcion){doc.setFont(undefined,'normal');doc.setTextColor(30,30,30);doc.setFontSize(8.5);doc.text(descL,10,y);y+=descL.length*4.2+2;}
+    if(r.numero_riesgo&&r.riesgo){
+      const bgColor=r.riesgo.includes('I -')?[217,83,79]:r.riesgo.includes('II -')?[240,173,78]:r.riesgo.includes('III')?[255,213,0]:[92,184,92];
+      const txColor=r.riesgo.includes('III')?[26,26,26]:[255,255,255];
+      doc.setFillColor(...bgColor);doc.roundedRect(10,y,textW,6,1,1,'F');
+      doc.setTextColor(...txColor);doc.setFontSize(8);doc.setFont(undefined,'bold');
+      doc.text(r.riesgo.split('|')[0].trim()+' (NR: '+r.numero_riesgo+')',10+textW/2,y+4.3,{align:'center'});y+=8;
+    }
+    if(r.pers){doc.setFont(undefined,'normal');doc.setTextColor(80,80,80);doc.setFontSize(8);doc.text('Personas expuestas: '+r.pers,10,y);y+=4;}
+    if(r.inc){const il=doc.splitTextToSize('Incumplimiento: '+(r.inc||''),textW);doc.setFontSize(8);doc.setTextColor(80,80,80);doc.text(il.slice(0,2),10,y);y+=il.slice(0,2).length*4+1;}
+    if(r.acc){const al=doc.splitTextToSize('Acciones: '+(r.acc||''),textW);doc.setFontSize(8);doc.setTextColor(50,80,50);doc.text(al.slice(0,2),10,y);y+=al.slice(0,2).length*4+1;}
+
+    if(hasH){doc.setFontSize(7.5);doc.setFont(undefined,'bold');doc.setTextColor(26,58,143);doc.text('Foto hallazgo',imgX,yStart+3);addImgFit(r.img_h,imgX,yStart+6,imgW,55);}
+
+    if(r.fc||r.med||hasC){
+      if(y+20>ph-8){doc.addPage();page++;hdr();y=25;}
+      const yCierreStart=y;
+      doc.setFillColor(253,250,240);doc.roundedRect(8,y,pw-16,7,1,1,'F');
+      doc.setFillColor(200,150,12);doc.rect(8,y,2.5,7,'F');
+      doc.setFont(undefined,'bold');doc.setFontSize(8);doc.setTextColor(138,101,0);
+      doc.text('CIERRE DEL HALLAZGO',13,y+4.8);
+      if(r.fc)doc.text(r.fc+(r.resp?' · '+r.resp:''),pw-10,y+4.8,{align:'right'});
+      y+=10;
+      if(r.med){doc.setFont(undefined,'normal');doc.setTextColor(55,65,81);doc.setFontSize(8.5);const ml=doc.splitTextToSize(r.med,textW);doc.text(ml.slice(0,3),10,y);y+=ml.slice(0,3).length*4.2+2;}
+      if(hasC){doc.setFontSize(7.5);doc.setFont(undefined,'bold');doc.setTextColor(138,101,0);doc.text('Foto cierre',imgX,yCierreStart+3);addImgFit(r.img_c,imgX,yCierreStart+6,imgW,55);}
+    }
+    doc.setDrawColor(210,220,235);doc.setLineWidth(.3);doc.line(8,y+1,pw-8,y+1);y+=7;
+  }
+
+</body>
+</html>
+
+/* ---- FUNCIONES PARA DROPDOWNS VINCULADOS ---- */
+function buildRiesgoSelect(){
+  const sel=document.getElementById('f_riesgo');
+  sel.innerHTML='<option value="">Seleccione tipo de riesgo...</option>';
+  Object.keys(RIESGOS_GTC).forEach(riesgo=>{
+    const opt=document.createElement('option');
+    opt.value=riesgo;
+    opt.textContent=riesgo;
+    sel.appendChild(opt);
+  });
+}
+
+function updPeligros(riesgoId,peligroId){
+  const riesgoSel=document.getElementById(riesgoId);
+  const peligroSel=document.getElementById(peligroId);
+  const riesgo=riesgoSel.value;
+  peligroSel.innerHTML='<option value="">Seleccione peligro...</option>';
+  if(riesgo&&RIESGOS_GTC[riesgo]){
+    RIESGOS_GTC[riesgo].peligros.forEach(peligro=>{
+      const opt=document.createElement('option');
+      opt.value=peligro;
+      opt.textContent=peligro;
+      peligroSel.appendChild(opt);
+    });
+  }
+}
+
+buildRiesgoSelect();
